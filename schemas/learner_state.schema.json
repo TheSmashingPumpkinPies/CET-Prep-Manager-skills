@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "learner_state.schema.json",
+  "title": "CET Learner State Snapshot",
+  "type": "object",
+  "required": ["learner_id", "target_exam", "generated_at", "modules"],
+  "properties": {
+    "learner_id": {"type": "string"},
+    "target_exam": {"enum": ["CET4", "CET6"]},
+    "target_exam_date": {"type": ["string", "null"], "format": "date"},
+    "target_reported_score": {"type": ["integer", "null"]},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "modules": {
+      "type": "object",
+      "properties": {
+        "listening": {"$ref": "#/$defs/moduleState"},
+        "reading": {"$ref": "#/$defs/moduleState"},
+        "writing": {"$ref": "#/$defs/moduleState"},
+        "translation": {"$ref": "#/$defs/moduleState"}
+      }
+    },
+    "module_balance": {
+      "type": "object",
+      "properties": {
+        "method": {"type": "string"},
+        "normalized_latest": {
+          "type": "object",
+          "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
+        },
+        "available_modules": {"type": "integer", "minimum": 0},
+        "mean": {"type": ["number", "null"]},
+        "gap": {"type": ["number", "null"]},
+        "strongest_module": {"type": ["string", "null"]},
+        "weakest_module": {"type": ["string", "null"]},
+        "is_balanced": {"type": ["boolean", "null"]}
+      }
+    },
+    "top_error_codes": {"type": "array", "items": {"type": "string"}},
+    "active_plan_id": {"type": ["string", "null"]}
+  },
+  "$defs": {
+    "moduleState": {
+      "type": "object",
+      "properties": {
+        "latest": {"type": ["number", "null"]},
+        "ma3": {"type": ["number", "null"]},
+        "ma5": {"type": ["number", "null"]},
+        "trend_slope": {"type": ["number", "null"]},
+        "volatility": {"type": ["number", "null"]},
+        "n": {"type": "integer", "minimum": 0},
+        "sufficiency": {"enum": ["insufficient", "emerging", "usable"]}
+      }
+    }
+  }
+}

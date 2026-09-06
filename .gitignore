@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Packaging / environments
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Secrets / local configuration
+.env
+.env.*
+!.env.example
+
+# Local databases and generated learner data
+*.sqlite
+*.sqlite3
+*.db
+data/*
+!data/.gitkeep
+exports/*
+!exports/.gitkeep
+reports/
+charts/
+
+# User-owned / copyrighted study materials
+materials/
+past_papers/
+papers/
+question_bank/
+private/
+local/

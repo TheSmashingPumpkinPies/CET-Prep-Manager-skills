@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "subjective_assessment.schema.json",
+  "title": "CET Subjective Assessment",
+  "type": "object",
+  "required": [
+    "section", "estimated_score", "score_low", "score_high",
+    "anchor_band", "band_low", "band_high", "confidence",
+    "rubric_version", "assessor_model", "skill_version", "diagnostic"
+  ],
+  "properties": {
+    "section": {"enum": ["writing", "translation"]},
+    "estimated_score": {"type": "integer", "minimum": 1, "maximum": 15},
+    "score_low": {"type": "integer", "minimum": 1, "maximum": 15},
+    "score_high": {"type": "integer", "minimum": 1, "maximum": 15},
+    "anchor_band": {"enum": [14, 11, 8, 5, 2]},
+    "band_low": {"enum": [1, 4, 7, 10, 13]},
+    "band_high": {"enum": [3, 6, 9, 12, 15]},
+    "confidence": {"enum": ["low", "medium", "high"]},
+    "rubric_version": {"type": "string", "minLength": 1},
+    "assessor_provider": {"type": ["string", "null"]},
+    "assessor_model": {"type": "string", "minLength": 1},
+    "skill_version": {"type": "string", "minLength": 1},
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+      }
+    },
+    "error_codes": {
+      "type": "array",
+      "items": {"type": "string"},
+      "uniqueItems": true
+    },
+    "overall_rationale": {"type": ["string", "null"]},
+    "revision": {"type": ["string", "null"]}
+  }
+}

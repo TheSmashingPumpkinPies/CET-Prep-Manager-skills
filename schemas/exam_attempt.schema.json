@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "exam_attempt.schema.json",
+  "title": "CET Exam Attempt",
+  "type": "object",
+  "required": ["exam_level", "attempt_type", "attempted_at"],
+  "properties": {
+    "attempt_id": {"type": "string", "format": "uuid"},
+    "exam_level": {"enum": ["CET4", "CET6"]},
+    "attempt_type": {"enum": ["full_mock", "section_practice", "official_exam", "diagnostic"]},
+    "attempted_at": {"type": "string", "format": "date-time"},
+    "source_key": {"type": ["string", "null"]},
+    "source_kind": {"enum": ["past_paper", "commercial_mock", "generated", "official_result", "other", null]},
+    "official_reported_score": {"type": ["integer", "null"], "minimum": 0, "maximum": 710},
+    "duration_seconds": {"type": ["integer", "null"], "minimum": 0},
+    "notes": {"type": ["string", "null"]},
+    "idempotency_key": {"type": ["string", "null"]},
+    "sections": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/sectionResult"}
+    }
+  },
+  "$defs": {
+    "sectionResult": {
+      "type": "object",
+      "required": ["section"],
+      "properties": {
+        "section": {"enum": ["listening", "reading", "writing", "translation", "overall"]},
+        "subtype": {"type": ["string", "null"]},
+        "correct_count": {"type": ["integer", "null"], "minimum": 0},
+        "total_count": {"type": ["integer", "null"], "minimum": 1},
+        "accuracy": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "duration_seconds": {"type": ["integer", "null"], "minimum": 0},
+        "practice_index": {"type": ["number", "null"]},
+        "provenance": {"type": ["string", "null"]}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["correct_count", "total_count"]},
+          "then": {
+            "properties": {
+              "correct_count": {"type": "integer", "minimum": 0},
+              "total_count": {"type": "integer", "minimum": 1}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cet-prep-manager"
+version = "0.1.0.dev0"
+description = "Local-first CET-4/CET-6 preparation manager for AI agents and deterministic learning analytics."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "CET Prep Manager contributors" }
+]
+dependencies = [
+  "pydantic>=2.7,<3",
+  "typer>=0.12,<1",
+  "openpyxl>=3.1,<4",
+  "matplotlib>=3.8,<4",
+  "pillow>=10.0,<12",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<10",
+  "ruff>=0.6,<1",
+]
+
+[project.scripts]
+cetpm = "cet_prep_manager.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cet_prep_manager = ["sql/*.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
