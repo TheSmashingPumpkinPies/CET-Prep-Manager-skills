@@ -1,175 +1,98 @@
 ---
 name: cet-prep-manager
-description: Persistent CET-4 and CET-6 preparation management skill for goal setting, mock recording, subjective evaluation, longitudinal analytics, dynamic study planning, and Excel dashboard reporting.
+description: 管理大学英语四、六级备考资料，包括目标确认、真题与模考记录、写作和翻译评估、长期趋势、学习计划及 Excel 报告。涉及 CET-4、CET-6、四六级成绩或备考管理时使用。
 ---
 
-# CET Prep Manager Skill Instructions
+# 大学英语四、六级备考管理
 
-This skill enables Antigravity and compatible AI agents to guide learners through CET-4 and CET-6 preparation. It bridges natural-language interaction with the local deterministic Python CLI (`cetpm` / `python -m cet_prep_manager`) and SQLite database.
+当前 Skill 版本：`0.2.0`。安装副本必须与仓库中的 `skill/SHA256SUMS` 完全一致。
 
-Before the first CLI call, verify that the Python package is installed and resolve one stable,
-absolute learner database path. Read [runtime.md](references/runtime.md) when the executable or
-database location has not already been established. The examples below assume
-`CETPM_DB_PATH` has been set to that path.
+本 Skill 负责把用户的自然语言需求转换为本地确定性命令，并以 SQLite 数据库保存长期状态。用户使用中文时，所有面向用户的说明都使用自然、通行的中文四六级术语；英文仅用于内部字段和命令。
 
----
+首次执行命令前，确认 Python 包和数据库路径。环境或数据库位置不明确时，先读 [运行环境与数据库约定](references/runtime.md)。
 
-## 1. Core Operating Principles
+## 必须遵守的原则
 
-1. **Deterministic Single Source of Truth:**
-   - The local SQLite database is the only authority for learner performance history, error recurrence, and study plans.
-   - **MANDATORY:** Always execute `cetpm status --json` or `cetpm plan show --json` before giving history-dependent diagnostics, trend commentary, or study recommendations.
-   - **NEVER** hallucinate, estimate, or reconstruct historical scores from conversation memory.
-2. **Clear Measurement Distinction:**
-   - **Official CET Reported Score (0–710):** Store only a score from the user's actual CET
-     result. Never derive or predict it from practice accuracy because the official reported score
-     is norm-referenced and cannot be reconstructed from one practice paper.
-   - **Objective Practice Metrics:** Exact counts (`correct_count` / `total_count`) and accuracy rates (0.00–1.00) from listening or reading practice.
-   - **Subjective Estimates (1–15):** AI evaluations aligned to official anchor bands (14, 11, 8, 5, 2) accompanied by uncertainty intervals `[score_low, score_high]`.
-   - **Pedagogical Diagnostic Dimensions (0–100):** Internal indicators (e.g. cohesion, syntactic variety) designed purely for student instruction; never conflate them with official scores.
-3. **Uncertainty-Aware Trend Policy:**
-   - A 1–2 point difference between two subjective evaluations does **not** prove progress if their confidence intervals overlap.
-   - Require data sufficiency (N >= 3 for emerging trends, N >= 5 for stable trends) before asserting reliable improvement or decline.
-4. **Immutable Plan Versioning:**
-   - Plans are never silently altered.
-   - Every plan adjustment increments the version (v1 → v2) and **requires** a recorded rationale (`rationale_md`).
-5. **Copyright Boundaries:**
-   - Do not reproduce full copyrighted past exam papers. Store user-provided performance metadata, error taxonomy codes, and student-generated answers.
+1. **先读取，再分析。** 涉及历史、进步、退步、薄弱项或计划时，先执行 `cetpm status --json`；涉及当前计划时再执行 `cetpm plan show --json`。不得用对话记忆补造数据库中不存在的成绩。
+2. **确认前不建档。** 首次调用、提到四六级或自我介绍都不等于同意写入资料。新建或修改个人资料必须遵守下文的确认流程。
+3. **区分四类分数。** 官方报告分、练习正确数/正确率、写作翻译的 1–15 分估分、教学诊断指标互不混用。
+4. **不把练习换算成官方报告分。** 官方报告分采用常模参照，不能从一套练习题的正确率准确反推。
+5. **不静默改计划。** 每次调整都生成新版本并保存原因；一次偶然波动不足以证明需要改计划。
+6. **不修改安装副本。** 普通备考会话不得编辑本 Skill、参考资料、版本文件或哈希清单；发现哈希不一致时停止使用，并从可信仓库重新安装。
+7. **写入后核验。** 只有命令成功并返回记录 ID，才可以告诉用户“已保存”。
+8. **不自行修改 Skill。** 发现问题时向用户说明，由维护流程统一修改源仓库。
+9. **遵守版权边界。** 不补写或复现缺失的真题原文；可以保存用户提供的做题成绩、错因和用户自己的答案。
 
----
+## 中文术语和题型事实
 
-## 2. Intent Routing & Workflow Guide
+回答题型、题数、分值比例、Section A/B/C 对应关系或成绩单结构前，必须先读 [四六级考试结构](references/cet-format.md) 和 [中文术语表](references/terminology-zh.md)。
 
-When the user interacts with the system, identify their intent and execute the appropriate CLI commands.
+- 不凭模型记忆猜题型。
+- “精听、复述、听写”是训练方法，不是现行四级或六级听力题型。
+- 用户只说 Section A/B/C 而考试级别不明确时，先确认是四级还是六级。
+- 内部保存稳定英文标识；给用户展示时转换成术语表中的中文名称。
 
-```mermaid
-flowchart TD
-    User([User Request]) --> Intent{Intent Classification}
-    Intent -->|Onboard / Setup| W_Onboard[cetpm profile update]
-    Intent -->|Check Status| W_Status[cetpm status --json]
-    Intent -->|Record Mock| W_Record[cetpm attempt add --json]
-    Intent -->|Grade Writing| W_Writing[Evaluate Rubric -> cetpm assessment add]
-    Intent -->|Grade Translation| W_Trans[Evaluate Rubric -> cetpm assessment add]
-    Intent -->|Review Errors| W_Errors[cetpm errors list / resolve]
-    Intent -->|Study Plan| W_Plan[cetpm plan show / create]
-    Intent -->|Record Training| W_Training[cetpm training add]
-    Intent -->|Check Intervention| W_Intervention[cetpm analytics intervention]
-    Intent -->|Export Report| W_Export[cetpm export --output]
-    Intent -->|Weekly Review| W_Weekly[cetpm report weekly]
-```
+## 意图与工作流
 
----
+### 1. 新建或修改备考资料
 
-### Intent 1: Learner Onboarding (`cet onboard`)
+仅当用户明确要求建立或修改个人备考资料时进入此流程。
 
-**Trigger:** User introduces themselves, specifies target exam level, goal score, or exam date.
+1. 先执行只读命令：`python -m cet_prep_manager profile show --json`。
+2. 若没有资料，只询问缺失的必填项：备考四级还是六级。姓名、目标分、考试日期、每日学习时间都是可选项，用户没说就保持空白。
+3. 向用户逐项展示准备保存的内容，并请求确认。
+4. 只有当前对话中得到明确肯定答复后，才能执行：
 
-**Execution:**
 ```bash
-python -m cet_prep_manager profile update   --exam CET6   --target-score 580   --target-date 2026-12-15   --daily-minutes 60   --name "LearnerName"
+python -m cet_prep_manager profile update --exam <CET4-or-CET6> [仅包含用户确认过的选项]
 ```
 
-**Agent Response:**
-- Confirm the established targets (Exam Level, Target Score, Exam Date, Daily Study Budget).
-- Explain the next recommended step: complete an initial diagnostic mock or section practice.
+沉默、超时、含糊回答或未选择选项都不构成同意。此时不得选择默认值、不得创建资料、不得自动生成学习计划。CLI 会拒绝缺少 `--exam` 的新资料。
 
----
+### 2. 记录官方考试成绩
 
-### Intent 2: Status & Diagnostic Check (`cet status` / `cet analyze`)
+官方成绩报告包括总分、听力、阅读、写作和翻译三个单项，其中写作和翻译在成绩报告中合并为一个单项。只保存用户从真实成绩报告中提供的数字：
 
-**Trigger:** User asks "我现在的备考进度怎么样？", "听力有提高吗？", or requests a diagnostic summary.
-
-**Execution:**
 ```bash
-python -m cet_prep_manager status --json
+python -m cet_prep_manager attempt add \
+  --exam <CET4-or-CET6> --type official_exam --source-kind official_result \
+  --official-score <总分> \
+  --official-listening-score <听力> \
+  --official-reading-score <阅读> \
+  --official-writing-translation-score <写作和翻译> \
+  --idempotency-key <稳定且唯一的键> --output-json
 ```
 
-**Interpretation Rules:**
-1. Parse the JSON `LearnerStateSnapshot`.
-2. Inspect `sufficiency` for each module:
-   - `insufficient` (N < 3): State that data is still preliminary; avoid bold claims.
-   - `emerging` (N = 3..4): Cite moving average (MA3) and observe tentative direction.
-   - `usable` (N >= 5): Formally evaluate trend slope, MA5, and volatility.
-3. Check `top_error_codes` to identify persistent weak points.
-4. If `active_plan_id` exists, summarize active plan priorities.
-5. Treat `module_balance` as a diagnostic planning aid only; it is not a 710-point conversion.
+总分允许 0–710，听力和阅读各允许 0–249，写作和翻译允许 0–212。三项齐全时，系统会校验三项之和等于总分。用户只提供部分分数时保留空值，不猜测缺项。
 
----
+### 3. 记录真题、模考或专项练习
 
-### Intent 3: Recording Mock Exams & Practice (`cet record`)
+先确认考试级别、试卷来源、日期以及用户提供的是整项成绩还是具体题型成绩。题型标识必须来自考试结构参考。
 
-**Trigger:** User provides results from a completed past paper or section drill.
-
-**Execution:**
-Construct an `exam_attempt` JSON payload:
 ```bash
 python -m cet_prep_manager attempt add --json '{
-  "exam_level": "CET6",
-  "attempt_type": "full_mock",
-  "source_key": "2024-06-SET1",
+  "exam_level": "<CET4-or-CET6>",
+  "attempt_type": "<full_mock-or-section_practice>",
+  "source_key": "<试卷标识>",
   "source_kind": "past_paper",
-  "idempotency_key": "cet6-2024-06-set1-2026-09-06",
-  "duration_seconds": 7800,
+  "idempotency_key": "<稳定且唯一的键>",
   "sections": [
     {
       "section": "listening",
-      "correct_count": 19,
-      "total_count": 25,
-      "accuracy": 0.76
-    },
-    {
-      "section": "reading",
-      "correct_count": 24,
-      "total_count": 30,
-      "accuracy": 0.80
-    }
-  ],
-  "error_events": [
-    {
-      "section": "listening",
-      "subtype": "lectures",
-      "taxonomy_code": "L-LEC-INFERENCE",
-      "severity": 2,
-      "evidence_note": "讲座细节推断题漏听连词however"
+      "subtype": "<考试结构参考中的内部标识>",
+      "correct_count": "<答对数>",
+      "total_count": "<题数>"
     }
   ]
 }'
 ```
 
-**Agent Response:**
-- Confirm the saved attempt ID.
-- Provide objective accuracy percentages.
-- Highlight recorded error event codes and offer targeted correction tips.
+整套标准试卷会校验题数。一个模块的完整子项按官方卷面权重聚合为一次观测；如果子项不完整，只保留子项记录，不把它冒充整项趋势。若用户另有明确的整项记录，可保存 `subtype` 为空的整项数据。
 
-If the user supplies a score from an actual CET result report, store it separately:
+### 4. 写作评估
 
-```bash
-python -m cet_prep_manager attempt add --exam CET6 --type official_exam --source-kind official_result --official-score 568 --idempotency-key cet6-official-2026-06
-```
+先读 [写作与翻译评分参考](references/evaluation-rubric.md)。输出并保存：1–15 分对齐估分、估分区间、置信度、评分依据、教学诊断和具体修改建议。不得称为官方阅卷分。
 
-Never use `--official-score` for a mock or section practice. Keep practice as raw counts,
-accuracy, optional `practice_index`, and subjective 1–15 estimates.
-
----
-
-### Intent 4: Writing Evaluation (`cet writing`)
-
-**Trigger:** User submits an essay for grading.
-
-**Evaluation Protocol:**
-1. **Holistic Assessment:** Map the essay to the official 5-band rubric (Anchor 14, 11, 8, 5, or 2). See [evaluation-rubric.md](references/evaluation-rubric.md).
-2. **Determine Score Interval & Confidence:**
-   - Specify an integer `estimated_score` (1–15), matching the persisted CLI contract.
-   - Set `[score_low, score_high]` based on uncertainty.
-   - Assign confidence (`high`, `medium`, `low`).
-3. **Score Diagnostic Dimensions (0–100):**
-   - `task_fulfillment`
-   - `cohesion_organization`
-   - `vocabulary_breadth`
-   - `syntactic_variety`
-4. **Identify Error Codes & Specific Sentence Revisions.**
-
-**Persistence Command:**
 ```bash
 python -m cet_prep_manager assessment add --json-input '{
   "section": "writing",
@@ -178,136 +101,49 @@ python -m cet_prep_manager assessment add --json-input '{
   "score_high": 12,
   "confidence": "medium",
   "rubric_version": "neea-public-v1",
-  "assessor_provider": "openai",
-  "assessor_model": "current-model",
-  "skill_version": "0.1.0.dev0",
-  "diagnostic": {
-    "task_fulfillment": 82.0,
-    "cohesion_organization": 75.0,
-    "vocabulary_breadth": 78.0,
-    "syntactic_variety": 70.0
-  },
-  "overall_rationale": "切题准确，论据充分，但在第二段转折处句式稍显单一，存在两处主谓一致小错误。",
-  "revision": "【原句】There are many reasons lead to this phenomenon.\n【修改】A variety of factors account for this phenomenon."
+  "assessor_provider": "<提供方>",
+  "assessor_model": "<模型>",
+  "skill_version": "<Skill版本>",
+  "diagnostic": {},
+  "overall_rationale": "<中文评分依据>"
 }'
 ```
 
-**Agent Feedback Format:**
-```markdown
-### 📝 写作评分报告 (Writing Assessment)
+给用户的报告使用“写作估分、估分区间、评估把握度、主要问题、修改建议”等自然中文标题，不堆叠英文括注。
 
-- **官方标准对齐估分（非官方成绩）:** 11 / 15 分（Anchor 11，区间 10 ~ 12 分）
-- **评估置信度:** Medium（区间宽度 2.0 分）
-- **诊断分项 (Pedagogical Diagnostics):**
-  - 切题与任务完成度: 82/100
-  - 篇章组织与连贯性: 75/100
-  - 词汇丰富与得体性: 78/100
-  - 句式多变与语法精准: 70/100
+### 5. 翻译评估
 
-#### 🔍 核心提分建议 (Key Recommendations)
-1. **修正常见语法瑕疵:** ...
-2. **升级句型结构:** ...
+同样使用 1–15 分对齐估分、区间和置信度。诊断重点为信息完整准确、句法结构、用词得当和表达通顺。指出中式英语、信息遗漏、时态或搭配问题，并保存结构化结果。
 
-#### ✍️ 句式升格示范 (Sentence Revisions)
-- **原文:** ...
-- **升格:** ...
-```
+### 6. 状态与趋势分析
 
----
-
-### Intent 5: Translation Evaluation (`cet translation`)
-
-**Trigger:** User submits a Chinese-to-English paragraph translation.
-
-**Evaluation Protocol:**
-Follow the identical two-layer evaluation architecture:
-- Anchor band & uncertainty interval.
-- Diagnostic dimensions: `fidelity_accuracy`, `syntactic_structure`, `lexical_appropriateness`, `fluency_readability` (0–100).
-- Identify Chinglish expressions, structural omissions, or tense mismatches.
-- Persist via `cetpm assessment add --section translation ...`.
-
----
-
-### Intent 6: Error Review & Management (`cet errors`)
-
-**Trigger:** User asks "我经常错哪些题？", "查看看我的错题本", or wants to resolve errors.
-
-**Execution:**
 ```bash
-# List persistent errors
-python -m cet_prep_manager errors list --state recurrent --json
-
-# Mark error as resolved after targeted intervention
-python -m cet_prep_manager errors update <ERROR_UUID> --state resolved
+python -m cet_prep_manager status --json
 ```
 
----
+- `insufficient`：少于 3 次，只能说数据不足。
+- `emerging`：3–4 次，可以描述初步方向，但不能下稳定结论。
+- `usable`：不少于 5 次，结合 MA5、趋势斜率和波动分析。
+- 两次主观估分区间重叠时，不能仅凭 1–2 分差异断言进步。
+- `module_balance` 只是备考诊断指标，不是 710 分换算。
 
-### Intent 7: Dynamic Planning & Replanning (`cet plan`)
+### 7. 错题与学习计划
 
-**Trigger:** User asks for a study plan, weekly review occurs, or significant performance shift is detected.
+查看错题使用 `cetpm errors list --json`。只有用户明确要求、到达复盘节点、连续证据显示瓶颈或计划明显不可执行时才调整计划。计划变化必须创建新版本并记录中文原因；不得因单次成绩波动自动改计划。
 
-**Replanning Policy:**
-A plan change is **strictly prohibited** on single-session noisy variations. A replan is only triggered when:
-1. Scheduled weekly review is reached;
-2. Learner explicitly requests a schedule adjustment;
-3. Repeated evidence of a bottleneck emerges (e.g. 3 consecutive sessions of poor listening Section C);
-4. Milestone exam result is logged;
-5. Significant adherence deficit makes previous plan unfeasible.
+### 8. 报告与导出
 
-**Execution:**
-```bash
-# View active plan and adherence
-python -m cet_prep_manager plan show
-
-# Create new immutable plan version
-python -m cet_prep_manager plan create   --priorities "听力讲座精听抓连词, 仔细阅读长难句拆分, 写作论据句型升级"   --rationale "近3次模考听力讲座失分率持续高于35%，原定阅读重点适度向听力倾斜。"   --items '[
-    {"module": "listening", "activity_type": "lectures_dictation", "target_minutes": 30, "target_count": 2, "due_date": "2026-09-20"},
-    {"module": "reading", "activity_type": "careful_reading_drill", "target_minutes": 25, "due_date": "2026-09-21"},
-    {"module": "writing", "activity_type": "argumentative_paragraph", "target_minutes": 20, "due_date": "2026-09-22"}
-  ]'
-
-# Update completion of planned item
-python -m cet_prep_manager plan update-item <PLAN_ITEM_UUID> --status done
-
-# Record the actual training activity
-python -m cet_prep_manager training add --module listening --activity-type lectures_dictation --minutes 30 --json
-
-# After at least two comparable observations on each side, check the exploratory response
-python -m cet_prep_manager analytics intervention <TRAINING_SESSION_UUID> --json
-```
-
----
-
-### Intent 8: Longitudinal Excel Dashboard Export (`cet dashboard` / `cet export`)
-
-**Trigger:** User requests an Excel export, statistics spreadsheet, or visualization dashboard.
-
-**Execution:**
 ```bash
 python -m cet_prep_manager export --output ./cet_prep_report.xlsx
-
-# Deterministic observed/derived weekly Markdown report
 python -m cet_prep_manager report weekly --output ./weekly_report.md --json
 ```
 
-**Export Characteristics:**
-- **9 Formatted Worksheets:** `Overview`, `Mock History`, `Listening`, `Reading`, `Writing`, `Translation`, `Errors`, `Plan History`, `Weekly Summary`.
-- **Embedded Dynamic Charts:**
-  1. `Overview`: Split dual subplot (Listening/Reading accuracy + Writing/Translation trajectories).
-  2. `Listening`: Longitudinal accuracy scatter + MA3 + MA5 + OLS regression slope.
-  3. `Reading`: Longitudinal accuracy scatter + MA3 + MA5 + OLS regression slope.
-  4. `Writing`: CET official anchor bands (2/5/8/11/14) colored background zones + score scatter + uncertainty confidence band + MA3.
-  5. `Translation`: Official anchor bands + score scatter + uncertainty confidence band + MA3.
-  6. `Errors`: Top 8 taxonomy codes stacked bar chart across resolution states (`new`, `recurrent`, `improving`, `resolved`).
-- Professional layout: Frozen headers, column auto-fit, auto-filters, numeric cells formatted as true numbers/percentages.
+报告必须区分实测数据、确定性计算结果和 AI 解读。官方成绩导出时保留总分、听力、阅读、写作和翻译四列，不把练习数据放进官方成绩字段。
 
----
+## 参考资料路由
 
-## 3. Skill Reference Index
-
-- [Runtime Setup, CLI Preflight & Database Path](references/runtime.md) — read when the package,
-  working directory, or learner database path is not already known.
-- [CET Exam Format & Timing](references/cet-format.md)
-- [Official 5-Band Evaluation Rubric & Diagnostics](references/evaluation-rubric.md)
-- [Copyright & Data Boundary Policy](references/copyright-policy.md)
+- [运行环境与数据库约定](references/runtime.md)：首次运行、包或数据库路径不清楚时读取。
+- [四六级考试结构](references/cet-format.md)：涉及题型、题数、分值、时间、Section 对应关系或官方成绩结构时读取。
+- [中文术语表](references/terminology-zh.md)：生成中文回答、图表标题、计划或错题标签时读取。
+- [写作与翻译评分参考](references/evaluation-rubric.md)：评估写作或翻译时读取。
+- [版权与数据边界](references/copyright-policy.md)：用户要求复现、补全或保存真题内容时读取。

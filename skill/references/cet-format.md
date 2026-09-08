@@ -1,57 +1,59 @@
-# CET-4 / CET-6 Exam Structure & Format Reference
+# 大学英语四、六级笔试结构
 
-## 1. Exam Overview
+本参考用于回答题型、题数、分值比例、考试时间和官方成绩结构。信息依据教育部教育考试院中国教育考试网，核对日期：2026-09-08。
 
-The College English Test (CET) Band 4 and Band 6 are standardized national English proficiency tests for university students in China.
+- 笔试结构：https://cet.neea.edu.cn/html1/folder/16113/1586-1.htm
+- 分数解释：https://cet.neea.edu.cn/xhtml1/folder/19081/5124-1.htm
 
-- **Total Reported Score:** 710 points
-- **Standard Passing Benchmark:** 425 points (frequently required for degrees or job eligibility)
-- **High Proficiency Benchmark:** 550–600+ points (demonstrating advanced proficiency for graduate admissions or competitive hiring)
-- **Total Duration:** 
-  - CET-4: 125 minutes
-  - CET-6: 130 minutes
+## 总体结构
 
----
+| 部分 | 分值比例 | 答题时间 |
+|---|---:|---:|
+| 写作 | 15% | 30 分钟 |
+| 听力理解 | 35% | 四级 25 分钟；六级 30 分钟 |
+| 阅读理解 | 35% | 40 分钟 |
+| 翻译 | 15% | 30 分钟 |
 
-## 2. Section Breakdown & Weighting
+四级答题时间合计 125 分钟，六级答题时间合计 130 分钟。
 
-| Section | Time Allocated | Raw Weight | Scaled Score Equivalent | Question Count | Format |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Writing** | 30 mins | 15% | 106.5 pts | 1 task | Essay / Letter / Proposal |
-| **Listening** | 25 mins (CET4) / 30 mins (CET6) | 35% | 248.5 pts | 25 items | Multiple Choice |
-| **Reading** | 40 mins | 35% | 248.5 pts | 30 items | Cloze, Long Matching, Careful Reading |
-| **Translation** | 30 mins | 15% | 106.5 pts | 1 task | Chinese-to-English paragraph |
+## 四级听力
 
----
+| 小节 | 测试内容 | 题型 | 题数 | 分值比例 | 内部标识 |
+|---|---|---|---:|---:|---|
+| Section A | 短篇新闻 | 单项选择 | 7 | 7% | `short_news` |
+| Section B | 长对话 | 单项选择 | 8 | 8% | `long_conversations` |
+| Section C | 听力篇章 | 单项选择 | 10 | 20% | `listening_passages` |
 
-## 3. Detailed Module Specifications
+## 六级听力
 
-### A. Writing (15%, 30 minutes)
-- **CET-4:** 120–180 words. Prompt formats include opinion essays, problem-solution essays, letters, notices, or visual/cartoon prompts.
-- **CET-6:** 150–200 words. Prompt formats frequently involve abstract philosophical quotes, technology/education dilemmas, or argumentative reasoning.
-- **Scoring Scale:** 0–15 points, mapped to 5 anchor bands (14, 11, 8, 5, 2).
+| 小节 | 测试内容 | 题型 | 题数 | 分值比例 | 内部标识 |
+|---|---|---|---:|---:|---|
+| Section A | 长对话 | 单项选择 | 8 | 8% | `long_conversations` |
+| Section B | 听力篇章 | 单项选择 | 7 | 7% | `listening_passages` |
+| Section C | 讲话/报道/讲座 | 单项选择 | 10 | 20% | `talks_reports_lectures` |
 
-### B. Listening Comprehension (35%)
-- **CET-4 (25 minutes, 25 questions):**
-  - Section A: Short News Reports (3 passages, 7 questions, 7% total weight)
-  - Section B: Long Conversations (2 conversations, 8 questions, 8% total weight)
-  - Section C: Listening Passages (3 passages, 10 questions, 20% total weight)
-- **CET-6 (30 minutes, 25 questions):**
-  - Section A: Long Conversations (2 conversations, 8 questions, 8% total weight)
-  - Section B: Listening Passages (2 passages, 7 questions, 7% total weight)
-  - Section C: Recorded Lectures / Talks (3 speeches/lectures, 10 questions, 20% total weight)
+现行四级和六级听力均没有听写题。听写只能作为训练方法。
 
-### C. Reading Comprehension (35%, 40 minutes, 30 questions)
-- **Section A: Banked Cloze (选词填空) (5% weight, 10 items):**
-  - 1 passage (200–300 words), 10 blanks, choose from 15 candidate words without repetition.
-- **Section B: Long Matching Reading (长篇阅读 / 段落匹配) (10% weight, 10 items):**
-  - 1 long passage (approx. 1000–1200 words), 10 statements to match with corresponding paragraphs.
-- **Section C: Careful Reading (仔细阅读) (20% weight, 10 items):**
-  - 2 traditional reading comprehension passages (approx. 400–500 words each), 5 multiple-choice questions per passage.
+## 阅读理解
 
-### D. Translation (15%, 30 minutes)
-- Chinese-to-English paragraph translation focusing on Chinese historical events, traditional culture, modern society, or technological/economic achievements.
-- **Length:**
-  - CET-4: 140–160 Chinese characters.
-  - CET-6: 180–200 Chinese characters.
-- **Scoring Scale:** 0–15 points, mapped to 5 anchor bands (14, 11, 8, 5, 2).
+| 小节 | 测试内容 | 题型 | 题数 | 分值比例 | 内部标识 |
+|---|---|---|---:|---:|---|
+| Section A | 词汇理解 | 选词填空 | 10 | 5% | `banked_cloze` |
+| Section B | 长篇阅读 | 匹配 | 10 | 10% | `long_reading_matching` |
+| Section C | 仔细阅读 | 单项选择 | 10 | 20% | `careful_reading` |
+
+## 写作与翻译
+
+- 写作：短文写作 1 题，30 分钟，占 15%。
+- 翻译：汉译英段落翻译 1 题，30 分钟，占 15%。
+- 写作与翻译可以按公开评分档位做 1–15 分的练习估分，但不能冒充官方阅卷成绩。
+
+## 官方成绩报告
+
+官方报告总分为 710 分。单项报告分为：
+
+- 听力：满分 249 分；
+- 阅读：满分 249 分；
+- 写作和翻译：合并报告，满分 212 分。
+
+三个单项报告分之和等于总分。官方报告分采用常模参照方式；练习正确率不能准确反推官方报告分。

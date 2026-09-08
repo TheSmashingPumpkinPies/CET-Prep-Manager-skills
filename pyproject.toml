@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cet-prep-manager"
-version = "0.1.0.dev0"
+version = "0.2.0"
 description = "Local-first CET-4/CET-6 preparation manager for AI agents and deterministic learning analytics."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -17,7 +17,7 @@ dependencies = [
   "typer>=0.12,<1",
   "openpyxl>=3.1,<4",
   "matplotlib>=3.8,<4",
-  "pillow>=10.0,<12",
+  "pillow>=10.0,<13",
 ]
 
 [project.optional-dependencies]

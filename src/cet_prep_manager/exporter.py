@@ -454,6 +454,9 @@ def generate_excel_report(
         "Source Key",
         "Source Kind",
         "Official Reported Score",
+        "Official Listening Score",
+        "Official Reading Score",
+        "Official Writing & Translation Score",
         "Duration (s)",
         "Notes",
     ]
@@ -476,9 +479,24 @@ def generate_excel_report(
         ws_mh.cell(
             row=r_idx,
             column=8,
+            value=att.get("official_listening_score"),
+        ).alignment = ALIGN_RIGHT
+        ws_mh.cell(
+            row=r_idx,
+            column=9,
+            value=att.get("official_reading_score"),
+        ).alignment = ALIGN_RIGHT
+        ws_mh.cell(
+            row=r_idx,
+            column=10,
+            value=att.get("official_writing_translation_score"),
+        ).alignment = ALIGN_RIGHT
+        ws_mh.cell(
+            row=r_idx,
+            column=11,
             value=att.get("duration_seconds"),
         ).alignment = ALIGN_RIGHT
-        ws_mh.cell(row=r_idx, column=9, value=att.get("notes") or "")
+        ws_mh.cell(row=r_idx, column=12, value=att.get("notes") or "")
         for c in range(1, len(mh_headers) + 1):
             ws_mh.cell(row=r_idx, column=c).font = DATA_FONT
             ws_mh.cell(row=r_idx, column=c).border = BORDER_BOX

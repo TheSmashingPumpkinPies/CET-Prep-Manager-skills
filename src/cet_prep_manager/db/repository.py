@@ -8,6 +8,8 @@ import sqlite3
 from typing import Any
 import uuid
 
+from cet_prep_manager.cet_format import validate_objective_result
+
 from cet_prep_manager.db.exceptions import (
     DuplicateIdempotencyKeyError,
     RecordNotFoundError,
@@ -260,6 +262,9 @@ def create_exam_attempt(
     source_key: str | None = None,
     source_kind: str | None = None,
     official_reported_score: int | None = None,
+    official_listening_score: int | None = None,
+    official_reading_score: int | None = None,
+    official_writing_translation_score: int | None = None,
     duration_seconds: int | None = None,
     notes: str | None = None,
     idempotency_key: str | None = None,
@@ -280,13 +285,29 @@ def create_exam_attempt(
     if source_kind is not None and source_kind not in VALID_SOURCE_KINDS:
         raise ValidationError(f"Invalid source_kind '{source_kind}', must be one of {VALID_SOURCE_KINDS}")
 
-    if official_reported_score is not None:
-        if attempt_type != "official_exam":
+    official_scores = {
+        "official_reported_score": (official_reported_score, 710),
+        "official_listening_score": (official_listening_score, 249),
+        "official_reading_score": (official_reading_score, 249),
+        "official_writing_translation_score": (official_writing_translation_score, 212),
+    }
+    if any(value is not None for value, _ in official_scores.values()) and attempt_type != "official_exam":
+        raise ValidationError(
+            "official reported scores may only be stored for attempt_type='official_exam'"
+        )
+    for field_name, (value, maximum) in official_scores.items():
+        if value is not None and not 0 <= value <= maximum:
+            raise ValidationError(f"{field_name} must be between 0 and {maximum}")
+    components = (
+        official_listening_score,
+        official_reading_score,
+        official_writing_translation_score,
+    )
+    if official_reported_score is not None and all(value is not None for value in components):
+        if sum(value for value in components if value is not None) != official_reported_score:
             raise ValidationError(
-                "official_reported_score may only be stored for attempt_type='official_exam'"
+                "official component scores must sum to official_reported_score"
             )
-        if not 0 <= official_reported_score <= 710:
-            raise ValidationError("official_reported_score must be between 0 and 710")
 
     if duration_seconds is not None and duration_seconds < 0:
         raise ValidationError("duration_seconds cannot be negative")
@@ -312,8 +333,10 @@ def create_exam_attempt(
                 INSERT INTO exam_attempt (
                     attempt_id, learner_id, attempted_at, exam_level,
                     attempt_type, source_key, source_kind, official_reported_score,
+                    official_listening_score, official_reading_score,
+                    official_writing_translation_score,
                     duration_seconds, notes, idempotency_key, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """,
                 (
                     new_attempt_id,
@@ -324,6 +347,9 @@ def create_exam_attempt(
                     source_key,
                     source_kind,
                     official_reported_score,
+                    official_listening_score,
+                    official_reading_score,
+                    official_writing_translation_score,
                     duration_seconds,
                     notes,
                     idempotency_key,
@@ -424,6 +450,36 @@ def add_section_result(
     """Add a section result to an exam attempt with deterministic accuracy calculation."""
     if section not in VALID_SECTIONS:
         raise ValidationError(f"Invalid section '{section}', must be one of {VALID_SECTIONS}")
+
+    attempt_row = conn.execute(
+        "SELECT exam_level, attempt_type FROM exam_attempt WHERE attempt_id = ?;",
+        (attempt_id,),
+    ).fetchone()
+    if attempt_row is None:
+        raise RecordNotFoundError(f"Exam attempt '{attempt_id}' not found")
+    try:
+        validate_objective_result(
+            exam_level=attempt_row["exam_level"],
+            attempt_type=attempt_row["attempt_type"],
+            section=section,
+            subtype=subtype,
+            total_count=total_count,
+        )
+    except ValueError as exc:
+        raise ValidationError(str(exc)) from exc
+
+    duplicate = conn.execute(
+        """
+        SELECT section_result_id FROM section_result
+        WHERE attempt_id = ? AND section = ? AND subtype IS ?;
+        """,
+        (attempt_id, section, subtype),
+    ).fetchone()
+    if duplicate is not None:
+        label = subtype or "overall"
+        raise ValidationError(
+            f"duplicate section result for attempt '{attempt_id}': {section}/{label}"
+        )
 
     if correct_count is not None and correct_count < 0:
         raise ValidationError("correct_count cannot be negative")

@@ -71,6 +71,11 @@ def build_weekly_report_data(
             "exam_level": row["exam_level"],
             "attempted_at": row["attempted_at"],
             "official_reported_score": row["official_reported_score"],
+            "official_listening_score": row.get("official_listening_score"),
+            "official_reading_score": row.get("official_reading_score"),
+            "official_writing_translation_score": row.get(
+                "official_writing_translation_score"
+            ),
         }
         for row in attempts
         if row.get("official_reported_score") is not None
@@ -145,9 +150,24 @@ def render_weekly_report(data: dict[str, Any]) -> str:
     if observed["official_results"]:
         lines.extend(["", "### Actual official CET results", ""])
         for result in observed["official_results"]:
+            component_text = ""
+            if all(
+                result.get(field) is not None
+                for field in (
+                    "official_listening_score",
+                    "official_reading_score",
+                    "official_writing_translation_score",
+                )
+            ):
+                component_text = (
+                    f"; listening {result['official_listening_score']}/249, "
+                    f"reading {result['official_reading_score']}/249, "
+                    "writing & translation "
+                    f"{result['official_writing_translation_score']}/212"
+                )
             lines.append(
                 f"- {result['exam_level']} `{result['attempted_at']}`: "
-                f"{result['official_reported_score']}/710 "
+                f"{result['official_reported_score']}/710{component_text} "
                 f"(attempt `{result['attempt_id']}`)"
             )
 

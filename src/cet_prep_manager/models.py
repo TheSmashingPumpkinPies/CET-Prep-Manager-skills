@@ -47,6 +47,16 @@ class SectionName(str, Enum):
     OVERALL = "overall"
 
 
+class ObjectiveSubtype(str, Enum):
+    SHORT_NEWS = "short_news"
+    LONG_CONVERSATIONS = "long_conversations"
+    LISTENING_PASSAGES = "listening_passages"
+    TALKS_REPORTS_LECTURES = "talks_reports_lectures"
+    BANKED_CLOZE = "banked_cloze"
+    LONG_READING_MATCHING = "long_reading_matching"
+    CAREFUL_READING = "careful_reading"
+
+
 class SubjectiveSectionName(str, Enum):
     WRITING = "writing"
     TRANSLATION = "translation"
@@ -135,7 +145,7 @@ class SectionResultModel(BaseModel):
     section_result_id: str | None = None
     attempt_id: str | None = None
     section: SectionName
-    subtype: str | None = None
+    subtype: ObjectiveSubtype | None = None
     correct_count: int | None = Field(default=None, ge=0)
     total_count: int | None = Field(default=None, ge=1)
     accuracy: float | None = Field(default=None, ge=0.0, le=1.0)
@@ -279,6 +289,9 @@ class ExamAttemptModel(BaseModel):
     source_key: str | None = None
     source_kind: SourceKind | None = None
     official_reported_score: int | None = Field(default=None, ge=0, le=710)
+    official_listening_score: int | None = Field(default=None, ge=0, le=249)
+    official_reading_score: int | None = Field(default=None, ge=0, le=249)
+    official_writing_translation_score: int | None = Field(default=None, ge=0, le=212)
     duration_seconds: int | None = Field(default=None, ge=0)
     notes: str | None = None
     idempotency_key: str | None = None
@@ -289,13 +302,23 @@ class ExamAttemptModel(BaseModel):
 
     @model_validator(mode="after")
     def validate_official_reported_score(self) -> ExamAttemptModel:
-        if (
-            self.official_reported_score is not None
-            and self.attempt_type != AttemptType.OFFICIAL_EXAM
-        ):
+        official_scores = (
+            self.official_reported_score,
+            self.official_listening_score,
+            self.official_reading_score,
+            self.official_writing_translation_score,
+        )
+        if any(score is not None for score in official_scores) and self.attempt_type != AttemptType.OFFICIAL_EXAM:
             raise ValueError(
-                "official_reported_score may only be stored for attempt_type='official_exam'"
+                "official reported scores may only be stored for attempt_type='official_exam'"
             )
+        components = official_scores[1:]
+        if self.official_reported_score is not None and all(score is not None for score in components):
+            component_total = sum(score for score in components if score is not None)
+            if component_total != self.official_reported_score:
+                raise ValueError(
+                    "official component scores must sum to official_reported_score"
+                )
         return self
 
 

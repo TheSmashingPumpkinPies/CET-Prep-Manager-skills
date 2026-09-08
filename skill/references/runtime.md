@@ -5,16 +5,20 @@ database location is unknown.
 
 ## Preflight
 
-1. Run `python -m cet_prep_manager version --short` (or `cetpm version --short`).
-2. If the module or command is unavailable, stop before claiming that anything was recorded.
+1. Verify the installed Skill against the repository copy with
+   `python scripts/verify_skill_install.py skill <installed-skill-directory>`. Any missing,
+   additional, or changed file is an installation failure; do not repair the installed copy in
+   place.
+2. Run `python -m cet_prep_manager version --short` (or `cetpm version --short`).
+3. If the module or command is unavailable, stop before claiming that anything was recorded.
    Explain that the package must be installed from the CET Prep Manager repository with
    `python -m pip install -e .` for development or `python -m pip install .` for a local runtime.
    Do not install software without the user's authorization when that action requires it.
-3. Resolve one absolute SQLite path for the learner. Prefer, in order:
+4. Resolve one absolute SQLite path for the learner. Prefer, in order:
    - an explicit `--db-path` supplied by the user;
    - the existing `CETPM_DB_PATH` environment variable;
    - `<project-root>/data/cet_prep.db` when the project root is known.
-4. Reuse that exact path for every command in the session. Set `CETPM_DB_PATH` in the command
+5. Reuse that exact path for every command in the session. Set `CETPM_DB_PATH` in the command
    environment or append `--db-path "<absolute-path>"` to every invocation.
 
 ## Safety and continuity

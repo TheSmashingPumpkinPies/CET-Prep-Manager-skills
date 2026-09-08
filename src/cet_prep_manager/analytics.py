@@ -16,6 +16,7 @@ from cet_prep_manager.db import (
     list_section_results,
     list_subjective_assessments,
 )
+from cet_prep_manager.cet_format import aggregate_objective_attempt
 from cet_prep_manager.models import (
     DataSufficiency,
     LearnerStateSnapshot,
@@ -154,13 +155,14 @@ def get_objective_section_series(
 ) -> list[float]:
     """Retrieve chronological accuracy series (0.0–1.0) for an objective section."""
     rows = list_section_results(conn, learner_id, section=section)
-    series: list[float] = []
+    rows_by_attempt: dict[str, list[dict[str, Any]]] = {}
     for r in rows:
-        acc = r.get("accuracy")
-        if acc is not None:
-            series.append(float(acc))
-        elif r.get("correct_count") is not None and r.get("total_count") is not None and r["total_count"] > 0:
-            series.append(round(r["correct_count"] / r["total_count"], 4))
+        rows_by_attempt.setdefault(r["attempt_id"], []).append(r)
+    series: list[float] = []
+    for attempt_rows in rows_by_attempt.values():
+        value = aggregate_objective_attempt(attempt_rows, section)
+        if value is not None:
+            series.append(value)
     return series
 
 
@@ -299,20 +301,17 @@ def get_intervention_response(
 
     module = session.get("module")
     if module in {"listening", "reading"}:
-        rows = conn.execute(
-            """
-            SELECT a.attempted_at AS observed_at,
-                   COALESCE(
-                       sr.accuracy,
-                       CAST(sr.correct_count AS REAL) / NULLIF(sr.total_count, 0)
-                   ) AS value
-            FROM section_result AS sr
-            JOIN exam_attempt AS a ON a.attempt_id = sr.attempt_id
-            WHERE a.learner_id = ? AND sr.section = ?
-            ORDER BY a.attempted_at ASC, sr.section_result_id ASC;
-            """,
-            (learner_id, module),
-        ).fetchall()
+        section_rows = list_section_results(conn, learner_id, section=module)
+        rows_by_attempt: dict[str, list[dict[str, Any]]] = {}
+        for row in section_rows:
+            rows_by_attempt.setdefault(row["attempt_id"], []).append(row)
+        rows = [
+            {
+                "observed_at": attempt_rows[0]["attempted_at"],
+                "value": aggregate_objective_attempt(attempt_rows, module),
+            }
+            for attempt_rows in rows_by_attempt.values()
+        ]
         unit = "accuracy"
     elif module in {"writing", "translation"}:
         rows = conn.execute(

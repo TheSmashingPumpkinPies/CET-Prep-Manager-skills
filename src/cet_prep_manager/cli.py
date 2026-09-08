@@ -821,7 +821,15 @@ def profile_update(
             if active:
                 target_exam = active["target_exam"]
             else:
-                target_exam = "CET6"
+                message = (
+                    "Target exam is required when creating a learner profile; "
+                    "provide --exam CET4 or --exam CET6."
+                )
+                if as_json:
+                    typer.echo(json.dumps({"error": message}, ensure_ascii=False))
+                else:
+                    typer.secho(message, fg=typer.colors.RED, err=True)
+                raise typer.Exit(code=1)
 
         try:
             profile = create_or_update_learner_profile(
@@ -884,6 +892,33 @@ def attempt_add(
             help="Actual 0-710 CET reported score; valid only with --type official_exam.",
         ),
     ] = None,
+    official_listening_score: Annotated[
+        int | None,
+        typer.Option(
+            "--official-listening-score",
+            min=0,
+            max=249,
+            help="Actual listening reported score (0-249); official exams only.",
+        ),
+    ] = None,
+    official_reading_score: Annotated[
+        int | None,
+        typer.Option(
+            "--official-reading-score",
+            min=0,
+            max=249,
+            help="Actual reading reported score (0-249); official exams only.",
+        ),
+    ] = None,
+    official_writing_translation_score: Annotated[
+        int | None,
+        typer.Option(
+            "--official-writing-translation-score",
+            min=0,
+            max=212,
+            help="Actual combined writing-and-translation reported score (0-212); official exams only.",
+        ),
+    ] = None,
     duration: Annotated[
         int | None,
         typer.Option("--duration", help="Duration in seconds."),
@@ -939,7 +974,16 @@ def attempt_add(
                     typer.secho(msg, fg=typer.colors.RED, err=True)
                 raise typer.Exit(code=1)
 
-        t_exam = exam or payload.get("exam_level") or "CET6"
+        target_profile = get_learner_profile(conn, target_learner)
+        if target_profile is None:
+            msg = f"Learner profile '{target_learner}' not found."
+            if output_json or is_json_invoked:
+                typer.echo(json.dumps({"error": msg}, ensure_ascii=False))
+            else:
+                typer.secho(msg, fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1)
+
+        t_exam = exam or payload.get("exam_level") or target_profile["target_exam"]
         t_type = type_ or payload.get("attempt_type") or "full_mock"
         t_source = source_key or payload.get("source_key")
         t_kind = source_kind or payload.get("source_kind")
@@ -947,6 +991,21 @@ def attempt_add(
             official_score
             if official_score is not None
             else payload.get("official_reported_score")
+        )
+        t_official_listening = (
+            official_listening_score
+            if official_listening_score is not None
+            else payload.get("official_listening_score")
+        )
+        t_official_reading = (
+            official_reading_score
+            if official_reading_score is not None
+            else payload.get("official_reading_score")
+        )
+        t_official_writing_translation = (
+            official_writing_translation_score
+            if official_writing_translation_score is not None
+            else payload.get("official_writing_translation_score")
         )
         t_dur = duration if duration is not None else payload.get("duration_seconds")
         t_notes = notes or payload.get("notes")
@@ -967,6 +1026,9 @@ def attempt_add(
                 source_key=t_source,
                 source_kind=t_kind,
                 official_reported_score=t_official_score,
+                official_listening_score=t_official_listening,
+                official_reading_score=t_official_reading,
+                official_writing_translation_score=t_official_writing_translation,
                 duration_seconds=t_dur,
                 notes=t_notes,
                 idempotency_key=t_idemp,
